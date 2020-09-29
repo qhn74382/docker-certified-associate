@@ -74,3 +74,353 @@ Container Format
         - Operate by creating layers, making them very lightweight and fast
         - Union mounting is a way of combining multiple directories into one that appears to contain their combined contents
 
+## Images & Containers
+  - ### Images
+    - Read-only template with instructions for runnng a Docker container
+    - Image are the 'build' or 'packaging' part of Docker's life cycle
+    - Can be considered to be the "source code" for the containers
+    - Highly portable and can be shared, stored, and updated
+    - You can create your own images or you can use those created by others and published in a registry
+    - One image can be based on another image, with some additional custmization
+  
+  - Using Images
+    - Creating images
+      - From Dockerfile providing step by step instructions
+      - Using docker commit command
+    - Distributing images
+      - Using the default Docker Hub registry
+      - You can create a public or private registry
+      - Save images to archive (tar files) and share
+
+  - ### Containers
+    - Containers are the 'running' or 'execution' aspect of Docker's life cycle
+    - Contains one or more running processes in a self-contained environment
+    - Wraps up an application into its own isolated box
+    - An application in its container, has no knowledge of any other applications or processes that exist outside of its box
+    - A running container can't touch the original image itself nor the filesystem of the host
+    - Changes made in a container are preserved in that container itself and don't effect the original image
+
+  - ### Layers with Top Writeable Layer
+    - Writeable layer is available in container, but not in an image
+    - All writes to the container that add new or modify existing data are stored here
+    - When the conatiner is deleted, the writeable layer is also deleted
+    - Multiple containers can access the same underlying image and yet have their own data state
+
+## Containerization vs. Virtualization - Deep Dive
+### Containers are not VMs
+  - Docker containers are executed with the Docker engine rather than the hypervisor
+  - Each VM has a full OS with its own kernel, memory management and virtual devie drivers
+  - Docker Containers are able to share a host kernel and share application libraries
+
+  |Containerization |Virtualization |
+  |-----------------|---------------|
+  |An abstration at the application layer that packages code and depepencies|An abstraction of the physical hardware turning one server into many servers|
+  |Containers take very little space|VMs include full copy of OS, apps, binaries|
+  |Containers take seconds to start|A full virtualized system usually takes minutes to start|
+  |Layerd file system|Each VM has its own independent file system|
+  |Less isolation, but are lightweight|More isolation, but heavy on resoures|
+  |No need for backups - data lives in a volume which is shared between containers |Can be backed up|
+  |Developers build a Docker image that includes exactly what htey need to run their application |VMs are built with full OS, developers may or may not be able to strip out unwanted components|
+  |Support for micro-services architecture |Monolithic architecture|
+
+### How Virtual Machines and Containers Work Together
+  - Docker containers can run inside Virtual Machines
+  - Capacity optimization - A physical server can host VMs that may house Docker hosts, but may also host any nuber of traditional monolithic VMs
+
+## Docker Ecosystem
+### Service Discovery
+  - Traffic coming from users will typically be balanced across the many hosts delivering the application
+  - Service discovery enables the application the application consumers to learn about he location of the devices providing those applications
+  - Containers providing a particular application register themselves so that other tools can know about their availability
+  - It makes conatiner based deployments, scalable and flexible
+
+### Load Balancing
+  - Distributes application traffic across multiple servers
+  - Kepps a list of the service beckends with their IP address and port location
+  - Continuous health testing of the backends to ensure they respond to requests correctly
+
+### Orchestration
+  - Automated configuration, coordination, and management of the backend servers, which collectively provide a Service
+  - Important responsibilities of Orchestration tools are:
+    - Provisioning and deployment
+    - Scaling up or down the containers
+    - Allocation of resources
+    - Movement of containers from one host to another
+    - Availability of containers
+  - Popular Orchestration Engines are Docker Swarm, Kubernetes, and Apache Mesos/Marathon
+
+## Install Docker on CentOS
+### Installation Using the Docker Repository
+  - Install required packages:
+    - yum-utils provides the yum-config-manager utility
+    - device-mapper-persistent-data and lvm2 are required by the device mapper storage driver
+    - set up the stable repository
+    - Enable (and later disable) the edge and test repositories
+    - List the available versions of Docker CE
+    - Install a specific version or the latest version
+    - Start the docker service post installation
+    - Configure docker to start on boot
+```bash
+#install required packages
+sudo yum install -y yum-utils \
+device-mapper-persistent-data \
+lvm2
+```
+```bash
+#set up stable repo
+sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+#enable edge and test repo
+sudo yum-config-manager --enable docker-ce-nightly
+sudo yum-config-manager --enable docker-ce-test
+#disable edge and test repo
+sudo yum-config-manager --disable docker-ce-nightly
+sudo yum-config-manager --disable docker-ce-test
+#check available Docker-CE version and install a specific version
+sudo yum list docker-ce --showduplicates | sort -r
+sudo yum install docker-ce-18.09.3 docker-ce-cli-18.09.3 containerd.io
+#install the lastest version
+sudo yum install -y docker-ce docker-ce-cli containerd.io
+#start docker and enable 
+sudo systemctl start docker
+sudo systemctl enable docker
+#testing docker container is installed correctly
+#pulling a 'hello-word' image from Docker Hub
+sudo docker run hello-world
+```
+
+### Manage Docker as a Non-Root User
+  - the docker daemon always runs as the root user
+  - Create a Unix group called docker and add users to it
+  - The docker group grants privileges equivalent to root user
+  - Add your user to the docker group
+    - sudo usermod -aG docker <username>
+  - Ensure docker is ready -- docker info
+  - Run a docker command without sudo
+```bash
+#get the docker container name
+whoami
+quynh.nguyen
+#run docker without sudo
+docker run hello-world
+#(give an error)
+
+#in order to runs as a root user, create a group
+sudo groupadd docker
+#create an user a
+sudo usermod -aG docker quynh.nguyen
+
+#Open new terminal and try to use without sudo
+docker run hello-world
+#Give docker information
+docker info | more
+```
+### Install From a Package:
+  - Download the RPM package and install it manually
+  - Manage upgrades manually
+
+### Install Using the Convenience Script:
+  - Convenience scripts for installing edge and testing versions of Docker CE into development environments quickly and non-interactively
+  - Available at get.docker.com and test.docker.com
+
+## Deploy, Login, Exit Container
+  - List the avaiable images on the host
+  - Run an interactive container with pseudo-TTY
+  - Exit the container
+  - Connect another session to the same running container
+  - docker attach and docker exec commands
+  - Run containers in detach mode
+  - List the running containers
+  - Docker run command help
+  
+```bash
+#list docker image on host
+docker image ls
+#download latest version of redis
+docker pull redis
+#download latest version of nginx
+docker pull nginx
+#run an interactive Ubuntu image
+docker run -it ubuntu
+#exit the container
+exit
+#create a new container
+docker run -it ubuntu
+#open new terminal and list all running container
+docker ps
+#attach the container into the running container
+docker attach <Container ID>
+#exit in one will exit in both
+exit
+#create a new container
+docker run -it ubuntu
+#open new terminal, and list all running container
+docker ps
+#
+docker exec -it <Container ID> bash
+#show 2 bash shell running
+ps -ef
+#exit in one will only exit the current container
+exit
+#run containers in detach mode
+docker run -d nginx
+docker run -d mongo
+docker run -d redis
+#check all running containers
+docker ps
+#read docker run help file
+docker run --help | more
+```
+
+### List, Start, Stop, Restart Containers
+  - List the running containers on the host in detach mode
+  - Stop a running container - docker stop
+  - List stopped containers
+  - Start a stopped container - docker start
+  - Restart a contaiiner - docker restart
+
+```bash
+#start a couple containers
+docker run -d nginx
+docker run -d redis
+docker ps
+docker stop <Container Name or Container ID>
+#list stopped containers
+docker ps -a
+#start a stopped container
+docker start <Container ID or Container Name>
+#restart a running container
+docker restart <Container ID or Container Name>
+```
+
+## Where Are Containers Stored?
+### Containers on File System
+  - Check the contents of the container directory, under /var/lib/docker
+  - cd /var/lib/docker/image/<storage-driver>
+  - Check the contents of repositories.json
+
+```bash
+cd /var/lib/docker
+#go to root user
+sudo su
+ls
+cd containers/
+ls
+#each container have their own directories, we will see a match name for the containers
+docker ps -a
+
+cd ../image/
+#list all file in the current directory
+ls
+#there's a file or directory called overlay2, find out what it is | It is a Storage Driver
+docker info | grep overloay2
+cd overlay2
+pwd
+ls
+
+docker image ls
+#Read all repositories in the repositories json file 
+cat repositories.json
+```
+
+## Containers Hostnames
+### Working with Container Hostnames
+  - Docker will automatically generate a name at random for each container we create
+    - Check the default name provided by running docker ps
+    - From inside the container run command hostname
+  - Run a container and provide only the Container name
+    - Check the default name provided - docker ps
+    - From inside the container run command - hostname
+  - Run a container and provide both Container Name and hostname
+    - Check the default name provided - docker ps
+    - From inside the container run command - hostname
+
+```bash
+#run ubuntu container image in detach mode
+docker run -it -d ubuntu
+#check the default name provided
+docker ps
+#attach the container
+docker attach <container id>
+#From inside the container, run hostname command - it shows the same name 
+hostname
+exit
+
+#run ubuntu container with Container Name
+docker run --name test1_con_name -it -d ubuntu
+docker ps
+docker attach test1_con-name
+#It shows the same hostname as the container Id when we use hostname command
+hostname
+exit
+
+#run ubuntu container with Container Name and hostname
+docker run --name test1_con_name --hostname test2_hostname -it -d ubuntu
+docker ps
+docker attach test2_con_name
+#It shows the specified hostname test2_con_name
+hostname
+exit
+```
+
+## Multiple Containers
+### Working with Multiple Containers
+  - Same image can be used to run multiple containers
+    - Provide container name as well as hostname with the docker run command
+    - Check the names
+    - Publish a port (meaning to provide access to your application) for each container
+  - Run a container from different images of the same repository
+    - Provide container name as well as hostname with the docker run command
+    - Check the names
+    - Publish a port for each container
+
+```bash
+#run nginx container with Container Name and hostname and external port 80
+docker run --name nginx_1 --hostname nginxhost_1 -p 80 -d nginx
+#run another nginx image
+docker run --name nginx_2 --hostname nginxhost_2 -p 80 -d nginx
+#show the running image and its external port
+docker ps
+#Open the browser and access the image with its external IP address and specified port
+IP Address:30223
+
+#Go to Docker Hub repository, and look in nginx repository for different or old version 
+docker run --name nginx_3 --hostname nginxhost_3 -p 80 -d nginx:1.14
+docker ps
+```
+
+## Stats Inspect
+### Container Stats and Inspect
+  - Docker top command
+    - Display the running processes of a container (there's no need to go inside the container to get the running processes)
+    - docker top <container id> or <container name>
+  - Docker stats command
+    - Display a live stream of container(s) resource usage statistics
+    - docker stats <container id> or <container name>
+  - Docker inspect command
+    - Return low-level infomation on Docker objects
+    - docker inspect <container id> or <container name>
+
+```bash
+#get the <container id>
+docker ps
+#get the running processes (nodes) in the container
+docker top <container id>
+docker stats <container id>
+#get all the details about the container objects
+docker inspect <container id> | more
+```
+## Deleting Containers
+  - Remove running containers
+    - Stopped Containers can be remove by using docker rm <container id> or <container name>
+    - You cannot remove a running container
+  - Configure the container to be self-deleted once stopped
+    - Command - docker run --rm
+
+```bash
+#configure the container to be self-deleted
+docker run --name self_delete --rm -p 80 -d nginx
+docker ps
+docker stop self-delete
+docker ps
+docker ps -a
+```
