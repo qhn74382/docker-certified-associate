@@ -401,6 +401,7 @@ docker ps
     - docker inspect <container id> or <container name>
 
 ```bash
+Troubleshooting containers
 #get the <container id>
 docker ps
 #get the running processes (nodes) in the container
